@@ -1,0 +1,11 @@
+# python stuff
+.eggs
+*.egg-info
+*.pyc
+*.pyo
+__pycache__
+.pytest_cache
+
+# sublime text droppings
+*.sublime-project
+*.sublime-workspace
