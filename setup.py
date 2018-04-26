@@ -23,7 +23,7 @@ setup(
     version='0.0.2',
     description='Snips skill MQTT listener helper code',
     author='sigmaris@gmail.com',
-    url='https://github.com/sigmaris/snips-listener',
+    url='https://github.com/sigmaris/snipslistener',
     download_url='',
     license='MIT',
     install_requires=['paho-mqtt'],
