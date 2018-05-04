@@ -39,8 +39,9 @@ def session_ended(func=None):
 
 class SessionManager(object):
 
-    def __init__(self, session_id, mqtt):
+    def __init__(self, session_id, site_id, mqtt):
         self.session_id = session_id
+        self.site_id = site_id
         self.mqtt = mqtt
         self.ended = False
 
@@ -57,6 +58,21 @@ class SessionManager(object):
             payload['intentFilter'] = intent_filters
         self.mqtt.publish(
             'hermes/dialogueManager/continueSession',
+            payload=json.dumps(payload)
+        )
+
+    def say(self, text):
+        if self.ended:
+            LOG.error("Trying to say something an already-ended session %s", self.session_id)
+            return
+
+        payload = {
+            'sessionId': self.session_id,
+            'siteId': self.site_id,
+            'text': text
+        }
+        self.mqtt.publish(
+            'hermes/tts/say',
             payload=json.dumps(payload)
         )
 
@@ -146,6 +162,7 @@ class SnipsListener(object):
         data = json.loads(msg.payload.decode())
         intent_data = data['intent']
         session_id = data['sessionId']
+        site_id = data['siteId']
         LOG.debug("data.sessionId="+str(session_id))
         LOG.debug("data.intent="+str(intent_data))
         LOG.debug("data.slots="+str(data['slots']))
@@ -177,11 +194,11 @@ class SnipsListener(object):
             if session_id in self._session_managers:
                 session_manager = self._session_managers[session_id]
             else:
-                session_manager = SessionManager(session_id=session_id, mqtt=client)
+                session_manager = SessionManager(session_id=session_id, site_id=site_id, mqtt=client)
                 self._session_managers[session_id] = session_manager
             intent_obj = IntentDetected(
                 session_id=session_id,
-                site_id=data['siteId'],
+                site_id=site_id,
                 custom_data=data.get('customData'),
                 input=data['input'],
                 intent_name=intent_data['intentName'],
