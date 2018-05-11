@@ -3,6 +3,7 @@ import collections
 import inspect
 import json
 import logging
+import logging.config
 
 import paho.mqtt.client as mqtt
 
