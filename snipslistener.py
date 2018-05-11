@@ -1,3 +1,4 @@
+import argparse
 import collections
 import inspect
 import json
@@ -393,7 +394,7 @@ class SnipsListener(object):
 class FallbackHandler(SnipsListener):
 
     @session_ended
-    def explain_unrecognised(data):
+    def explain_unrecognised(self, data):
         if data.reason == "intentNotRecognized":
             payload = {
                 'sessionId': data.session_id,
