@@ -5,6 +5,7 @@
 *.pyo
 __pycache__
 .pytest_cache
+.venv
 
 # sublime text droppings
 *.sublime-project

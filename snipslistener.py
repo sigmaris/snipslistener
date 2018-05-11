@@ -108,7 +108,7 @@ class SnipsListener(object):
     def __init__(self, mqtt_host, mqtt_port=1883):
         self.mqtt_host = mqtt_host
         self.mqtt_port = mqtt_port
-        self.client = None
+        self._mqtt_client = None
         self._intent_handlers = collections.defaultdict(list)
         self._hotword_detected_handlers = set()
         self._session_ended_handlers = set()
@@ -136,15 +136,16 @@ class SnipsListener(object):
         client.subscribe("hermes/intent/#")
         client.subscribe("hermes/hotword/+/detected")
         client.subscribe("hermes/dialogueManager/sessionEnded")
-        # client.subscribe("hermes/nlu/#")
-        # client.subscribe("hermes/asr/#")
+        client.subscribe("hermes/nlu/#")
+        client.subscribe("hermes/asr/#")
         # client.subscribe("hermes/dialogueManager/#")
 
-    # def asr(self, client, userdata, msg):
-    #     print(msg.topic+" "+str(msg.payload.decode()))
-    #     data = json.loads(msg.payload.decode())
-    #     print(data)
-    #
+    def asr(self, client, userdata, msg):
+        LOG.debug("ASR debug: %s -> %s", msg.topic, msg.payload.decode())
+
+    def nlu(self, client, userdata, msg):
+        LOG.debug("NLU debug: %s -> %s", msg.topic, msg.payload.decode())
+
     # def dialogueManager(self, client, userdata, msg):
     #     data = json.loads(msg.payload.decode())
     #     print(data)
@@ -349,10 +350,6 @@ class SnipsListener(object):
 #                        hostname=mqtt_host,
 #                        port=mqtt_port)
 #
-# def nlu(client, userdata, msg):
-#     print(msg.topic+" "+str(msg.payload.decode()))
-#     data = json.loads(msg.payload.decode())
-#     print(data)
 #
 # # setTimer intent handler, doesn't actually do anything as you can see
 # def setTimer(client, userdata, msg):
@@ -363,31 +360,66 @@ class SnipsListener(object):
 #     print("data.slots"+data['slots'])
 
     def connect(self):
-        self.client = mqtt.Client()
-        self.client.on_connect = self.on_connect
+        self._mqtt_client = mqtt.Client()
+        self._mqtt_client.on_connect = self.on_connect
 
         # These are here just to print random info for you
-        # client.message_callback_add("hermes/asr/#", self.asr)
+        self._mqtt_client.message_callback_add("hermes/asr/#", self.asr)
         # client.message_callback_add("hermes/dialogueManager/#", self.dialogueManager)
-        # client.message_callback_add("hermes/nlu/#", self.nlu)
+        self._mqtt_client.message_callback_add("hermes/nlu/#", self.nlu)
         # client.message_callback_add("hermes/nlu/intentNotParsed", self.intentNotParsed)
         # client.message_callback_add("hermes/nlu/intentNotRecognized",
         #                             self.intentNotRecognized)
 
         # This function responds to all intents
         # TODO: intent namespacing? maybe that goes in subscription code
-        self.client.message_callback_add("hermes/intent/#", self._handle_intent)
-        self.client.message_callback_add("hermes/hotword/+/detected", self._handle_hotword_detected)
-        self.client.message_callback_add("hermes/dialogueManager/sessionEnded", self._handle_session_ended)
+        self._mqtt_client.message_callback_add("hermes/intent/#", self._handle_intent)
+        self._mqtt_client.message_callback_add("hermes/hotword/+/detected", self._handle_hotword_detected)
+        self._mqtt_client.message_callback_add("hermes/dialogueManager/sessionEnded", self._handle_session_ended)
 
-        self.client.connect(self.mqtt_host, self.mqtt_port, 60)
+        self._mqtt_client.connect(self.mqtt_host, self.mqtt_port, 60)
 
     def loop_forever(self):
-        if self.client is None:
+        if self._mqtt_client is None:
             self.connect()
 
         # Blocking call that processes network traffic, dispatches callbacks and
         # handles reconnecting.
         # Other loop*() functions are available that give a threaded interface and a
         # manual interface.
-        self.client.loop_forever()
+        self._mqtt_client.loop_forever()
+
+
+class FallbackHandler(SnipsListener):
+
+    @session_ended
+    def explain_unrecognised(data):
+        if data.reason == "intentNotRecognized":
+            payload = {
+                'sessionId': data.session_id,
+                'siteId': data.site_id,
+                'text': "Sorry, I didn't understand that."
+            }
+            self._mqtt_client.publish(
+                'hermes/tts/say',
+                payload=json.dumps(payload)
+            )
+
+
+def run_fallback_handler():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--config", help="Configuration JSON file", default="config.json")
+    args = parser.parse_args()
+    with open(args.config, 'r') as infile:
+        config = json.load(infile)
+        listener_args = {
+            "mqtt_host": config["mqtt_host"],
+        }
+        if 'mqtt_port' in config:
+            listener_args['mqtt_port'] = int(config['mqtt_port'])
+        if 'logging_config' in config:
+            logging.config.dictConfig(config['logging_config'])
+        else:
+            logging.basicConfig(level=logging.INFO)
+        listener = FallbackHandler(**listener_args)
+        listener.loop_forever()

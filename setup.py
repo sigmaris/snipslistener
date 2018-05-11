@@ -20,7 +20,7 @@ class PyTest(TestCommand):
 
 setup(
     name='snipslistener',
-    version='0.0.3',
+    version='0.0.4',
     description='Snips skill MQTT listener helper code',
     author='sigmaris@gmail.com',
     url='https://github.com/sigmaris/snipslistener',
@@ -31,4 +31,7 @@ setup(
     cmdclass = {'test': PyTest},
     keywords=['snips', 'mqtt'],
     py_modules=['snipslistener'],
+    entry_points={
+        'console_scripts': ['fallbackhandler=snipslistener:run_fallback_handler'],
+    }
 )
