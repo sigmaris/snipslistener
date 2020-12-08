@@ -5,39 +5,39 @@ from unittest import mock
 import pytest
 import paho.mqtt.client
 
-from snipslistener import snips_listener
+from snipslistener import intent, SnipsListener, IntentDetected, SessionEnded
 
 LOG = logging.getLogger(__name__)
 
 
-class ExampleSkill(snips_listener.SnipsListener):
+class ExampleSkill(SnipsListener):
 
     def __init__(self):
         super().__init__('test-mqtt-example')
 
-    @snips_listener.intent('multiturn')
+    @intent('multiturn')
     def multi_turn_gen(self, data):
         LOG.info("Starting multi-turn dialogue")
 
         result = yield "Reply to user 1"
-        if isinstance(result, snips_listener.IntentDetected):
+        if isinstance(result, IntentDetected):
             LOG.info("User replied with %r", result)
-        elif isinstance(result, snips_listener.SessionEnded):
+        elif isinstance(result, SessionEnded):
             LOG.info("Session ended with %r", result)
         else:
             raise ValueError(result)
 
         result = yield ("Reply to user 2", ['intent_filter_1', "intent_filter_2"])
-        if isinstance(result, snips_listener.IntentDetected):
+        if isinstance(result, IntentDetected):
             LOG.info("User replied with %r", result)
-        elif isinstance(result, snips_listener.SessionEnded):
+        elif isinstance(result, SessionEnded):
             LOG.info("Session ended with %r", result)
         else:
             raise ValueError(result)
 
         return "final text to user"
 
-    @snips_listener.intent('singleturn')
+    @intent('singleturn')
     def single_turn(self, data):
         LOG.info("Starting single-turn dialogue")
         data.session_manager.end_session("Single and final reply to user")
