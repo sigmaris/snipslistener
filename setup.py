@@ -20,7 +20,7 @@ class PyTest(TestCommand):
 
 setup(
     name='snipslistener',
-    version='0.0.6',
+    version='0.0.7',
     description='Snips skill MQTT listener helper code',
     author='sigmaris@gmail.com',
     url='https://github.com/sigmaris/snipslistener',

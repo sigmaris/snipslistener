@@ -205,7 +205,7 @@ class SnipsListener(object):
                 custom_data=data.get('customData'),
                 input=data['input'],
                 intent_name=intent_data['intentName'],
-                probability=intent_data['probability'],
+                probability=intent_data.get('confidenceScore', intent_data.get('probability', 1.0)),
                 slots={
                     s['slotName']: Slot(
                         slot_name=s['slotName'],
@@ -303,75 +303,13 @@ class SnipsListener(object):
         if session_id in self._session_managers:
             del self._session_managers[session_id]
 
-    # @intent('convertUnits', 'sigmaris')
-    # def demo_intent(self, data):
-    #     print("demo intent")
-    #     print(repr(data))
-
-        # # We didn't recognize that intent.
-        # else:
-        #     payload = {
-        #         'sessionId': data.get('sessionId', ''),
-        #         'text': "I am not sure what to do",
-        #     }
-        #     publish.single('hermes/dialogueManager/endSession',
-        #                    payload=json.dumps(payload),
-        #                    hostname=self.mqtt_host,
-        #                    port=self.mqtt_port)
-#
-# def intentNotParsed(client, userdata, msg):
-#     print(msg.topic+" "+str(msg.payload.decode()))
-#     data = json.loads(msg.payload.decode())
-#     print(data)
-#
-#     # I am actually not sure what message is sent for partial queries
-#     if 'sessionId' in data:
-#         payload = {'text': 'I am not listening to you anymore',
-#                    'sessionId': data.get('sessionId', '')
-#                    }
-#         publish.single('hermes/dialogueManager/endSession',
-#                        payload=json.dumps(payload),
-#                        hostname=mqtt_host,
-#                        port=mqtt_port)
-#
-# def intentNotRecognized(client, userdata, msg):
-#     print(msg.topic+" "+str(msg.payload.decode()))
-#     data = json.loads(msg.payload.decode())
-#     print(data)
-#
-#     # Intent isn't recognized so session will already have ended
-#     # so we send a notification instead.
-#     if 'sessionId' in data:
-#         payload = {'siteId': data.get('siteId', ''),
-#                    'init': {'type': 'notification',
-#                             'text': "I didn't understand you"
-#                            }
-#                    }
-#         publish.single('hermes/dialogueManager/startSession',
-#                        payload=json.dumps(payload),
-#                        hostname=mqtt_host,
-#                        port=mqtt_port)
-#
-#
-# # setTimer intent handler, doesn't actually do anything as you can see
-# def setTimer(client, userdata, msg):
-#     print(msg.topic+" "+str(msg.payload.decode()))
-#     data = json.loads(msg.payload.decode())
-#     print("data.sessionId"+data['sessionId'])
-#     print("data.intent"+data['intent'])
-#     print("data.slots"+data['slots'])
-
     def connect(self):
         self._mqtt_client = mqtt.Client()
         self._mqtt_client.on_connect = self.on_connect
 
         # These are here just to print random info for you
         self._mqtt_client.message_callback_add("hermes/asr/#", self.asr)
-        # client.message_callback_add("hermes/dialogueManager/#", self.dialogueManager)
         self._mqtt_client.message_callback_add("hermes/nlu/#", self.nlu)
-        # client.message_callback_add("hermes/nlu/intentNotParsed", self.intentNotParsed)
-        # client.message_callback_add("hermes/nlu/intentNotRecognized",
-        #                             self.intentNotRecognized)
 
         # This function responds to all intents
         # TODO: intent namespacing? maybe that goes in subscription code
